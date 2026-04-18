@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-void mcp_begin()
+void mcp_module()
 {
     DDRB |= (1 << DDB5);  // SCK -> 7 MCP
     DDRB |= (1 << DDB2);  // SS -> 5 MCP
@@ -12,7 +12,7 @@ void mcp_begin()
     SPCR |= (1 << SPE) | (1 << MSTR) | (1 << SPR0);
     SPSR |= (1 << SPI2X);
 }
-uint16_t read_mcp()
+uint16_t mcp_read()
 {
 
     PORTB &= ~(1 << PB2);

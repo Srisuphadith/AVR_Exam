@@ -60,7 +60,7 @@ void loop()
     lcdLine2();
     sprintf(buffer2, "%02d %s %02d", d,monthName(mo),y);
     lcdPrintString(buffer2);
-    my_delay(100);
+    my_delay(1000);
     lcdClear();
 }
 

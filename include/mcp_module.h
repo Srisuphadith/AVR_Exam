@@ -4,7 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-void mcp_begin();
-uint16_t read_mcp();
+void mcp_module();
+uint16_t mcp_read();
 
 #endif
