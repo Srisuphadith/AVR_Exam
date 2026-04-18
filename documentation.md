@@ -16,6 +16,10 @@ Ex. เปิด PD3 ให้มีค่า HIGH
 ```
     digital_event(D,3,1);
 ```
+Ex. อ่านค่าจาก pin PB6
+```
+    uint8_t = digital_input(B,6);
+```
 
 ---
 
@@ -44,7 +48,7 @@ include
 ```
 Ex. อ่านค่า analog จาก ADC3
 ```
-    uint8_t value = analog_read(3);
+    uint16_t value = analog_read(3);
 ```
 
 ---
@@ -109,6 +113,7 @@ include
 PB5(CLK) -> 7(CL)MCP
 PB4(MISO) -> 6(Dout) MCP
 PB2(SS) -> 5(CS) MCP
+
 include
 ```
     #include "./include/mcp_module.h"
@@ -121,6 +126,8 @@ include
 ---
 
 # ds1307_module (Real Time Clock)
+PC5(SCL) -> 6(SCL) DS1307
+PC4(SDA) -> 5(SDA) DS1307
 
 include
 ```
