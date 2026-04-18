@@ -1,7 +1,7 @@
 #define F_CPU 8000000UL
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "pin_module.h"
+#include "../include/pin_module.h"
 
 //เเก้ขาตรงนี้นะะะ!!!!!!
 //              r1,r2,r3,r4

@@ -2,8 +2,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdbool.h>
-#include "delay_module.h"
-#include "pin_module.h"
+#include "../include/delay_module.h"
+#include "../include/pin_module.h"
 
 //เเก้ขาตรงนี้นะะะ!!!!!!
 //                D4 D5 D6 D7 RS E
