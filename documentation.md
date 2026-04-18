@@ -50,7 +50,7 @@ Ex. อ่านค่า analog จาก ADC3
 ---
 
 # lcd_module
-
+***กำหนด pin ใน ./src/lcd_module.c***
 include
 ```
     #include "./include/lcd_module.h"
@@ -86,8 +86,8 @@ include
 
 # ultrasonic_module
 
-PB0 -> trigger
-PB3 -> echo
+PB0 -> echo
+PB3 -> trigger
 
 include
 ```
@@ -104,8 +104,11 @@ include
 
 ---
 
-# mcp_module (อ่าน analog 12 bit resolution จาก MCP3201)
+# mcp_module (ADC 12 bit resolution MCP3201)
 
+PB5(CLK) -> 7(CL)MCP
+PB4(MISO) -> 6(Dout) MCP
+PB2(SS) -> 5(CS) MCP
 include
 ```
     #include "./include/mcp_module.h"
