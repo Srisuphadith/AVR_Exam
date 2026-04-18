@@ -53,7 +53,7 @@ uint8_t bcdToDec(uint8_t val)
 {
     return ((val >> 4) * 10) + (val & 0x0F);
 }
-void rtc_init()
+void rtc_module()
 {
     TWI_Init();
     // lcdPrintString("1");

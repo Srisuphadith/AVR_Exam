@@ -3,6 +3,7 @@
 
 #define B 'B'
 #define D 'D'
+#define C 'C'
 #define I 'I'
 #define O 'O'
 #include <avr/io.h>

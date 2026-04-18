@@ -4,6 +4,7 @@
 
 # define B 'B'
 # define D 'D'
+# define C 'C'
 # define I 'I'
 # define O 'O'
 
@@ -24,6 +25,14 @@ void pin_config(char g,uint8_t n,char m){
         //output
         DDRD |= (1 << n);
         PORTD &= ~(1 << n);
+    }else if(g == 'C' && m == 'I'){
+        //input mode
+        DDRC &= ~(1 << n);
+        PORTC |= (1 << n);
+    }else if(g == 'C' && m == 'O'){
+        //output
+        DDRC |= (1 << n);
+        PORTC &= ~(1 << n);
     }
 }
 void digital_event(char g,uint8_t n,int v){
@@ -39,6 +48,12 @@ void digital_event(char g,uint8_t n,int v){
     }else if(g == 'D' && v == 1){
         //set high
         PORTD |= (1 << n);
+    }else if(g == 'C' && v == 0){
+        //set low
+        PORTC &= ~(1 << n);
+    }else if(g == 'C' && v == 1){
+        //set high
+        PORTC |= (1 << n);
     }
 }
 uint8_t digital_input(char g,uint8_t n){
@@ -47,6 +62,9 @@ uint8_t digital_input(char g,uint8_t n){
         return 0;
     }else if(g == 'D'){
         if((PIND >> n) & 0x01) return 1;
+        return 0;
+    }else if(g == 'C'){
+        if((PINC >> n) & 0x01) return 1;
         return 0;
     }
 }
