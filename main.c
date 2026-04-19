@@ -16,65 +16,71 @@
 void setup()
 {
     lcd_module();
-    // mcp_begin();
-    // ultrasonic_begin();
-    // lcdPrintString("Hiura Mihate");
-    rtc_module();
-    rtc_setDateTime(13, 07, 0, 25, 3, 26); // h : m : s , day , month, year
+    mcp_module();
+    //ultrasonic_begin();
+    //lcdPrintString("Hiura Mihate");
+    // rtc_module();
+    // rtc_setDateTime(13, 07, 0, 25, 3, 26); // h : m : s , day , month, year
 }
 void loop()
 {
-    /*
-    lcdPrintString("Hiura");
-    my_delay(1000);
-    lcdClear();
-    my_delay(10);
-    lcdPrintString("Mihate");
-    my_delay(1000);
-    lcdClear();
-    my_delay(10);
-    */
+    
+    // lcdPrintString("Hello world!");
+    // my_delay(1000);
+    // lcdClear();
+    // my_delay(50);
+    // lcdPrintString("CPE37");
+    // my_delay(1000);
+    // lcdClear();
+    // my_delay(50);
+    
 
-    /*
-    char buff = keypad_read();
-    if (buff != 'N')
-    {
-        lcdClear();
-        my_delay(70);
-        lcdPrintChar(buff);
-    }
-    */
+    
+    // char buff = keypad_read();
+    // if (buff != 'N')
+    // {
+    //     lcdClear();
+    //     my_delay(70);
+    //     lcdPrintChar(buff);
+    // }
+    
 
     /*
     char buff[10];
-    itoa(distance,buff,10);
+    //itoa(distance,buff,10);
+    sprintf(buff, "%d cm",(int)distance);
     lcdClear();
     lcdPrintString(buff);
-    my_delay(100);
+    
+    my_delay(200);
     */
 
-    /*
+    int x = mcp_read();
     char buff[20];
-    itoa(read_mcp(), buff, 10);
+    itoa(mcp_read(), buff, 10);
     lcdPrintString(buff);
     my_delay(200);
     lcdClear();
-    */
+    
 
-    /*
-    uint8_t h, m, s, d, mo, y;
-    char buffer1[20];
-    char buffer2[20];
-    rtc_getDateTime(&h, &m, &s, &d, &mo, &y);
-    sprintf(buffer1, "%02d:%02d:%02d", h,m,s);
-    lcdPrintString(buffer1);
-    lcdLine2();
-    sprintf(buffer2, "%02d %s %02d", d,monthName(mo),y);
-    lcdPrintString(buffer2);
-    my_delay(1000);
-    lcdClear();
-    */
+    
+    // uint8_t h, m, s, d, mo, y;
+    // char buffer1[20];
+    // char buffer2[20];
+    // rtc_getDateTime(&h, &m, &s, &d, &mo, &y);
+    // sprintf(buffer1, "%02d:%02d:%02d", h,m,s);
+    // lcdPrintString(buffer1);
+    // lcdLine2();
+    // sprintf(buffer2, "%02d %s %02d", d,monthName(mo),y);
+    // lcdPrintString(buffer2);
+    // my_delay(1000);
+    // lcdClear();
+    
 }
+
+
+
+
 
 void main()
 {

@@ -4,9 +4,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-extern volatile int runtime;
+// extern volatile int runtime;
 
-void delay_module();
+//void delay_module();
 void my_delay(int t);
-
+void my_delay_us(int t);
 #endif

@@ -5,10 +5,23 @@
 
 
 uint16_t analog_read(uint8_t n){
+    ADMUX &= ~(0x0F);
     ADMUX |= (1 << REFS0) | n;
     ADCSRA |= (1 << ADEN) | (1 << ADPS0)| (1 << ADPS1) | (1 << ADPS2) | (1 << ADSC);
     while(!(ADCSRA & (1 << ADIF)));
     return ADC;
+}
+void analog_interrup_mode(uint8_t n){
+    ADMUX &= ~(0x0F);
+    ADMUX |= (1 << REFS0) | n;
+    ADCSRA |= (1 << ADEN) | (1 << ADPS0)| (1 << ADPS1) | (1 << ADPS2)| (1 << ADSC);
+}
+void analog_interrupt_en(){
+    sei();
+    ADCSRA |= (1 << ADIE);
+}
+void analog_interrupt_dis(){
+    ADCSRA &= ~(1 << ADIE);
 }
 
 // void setup()

@@ -13,9 +13,9 @@ uint8_t pn[6] = {0, 1, 2, 3, 4, 6};
 void pushData()
 {
     digital_event(pn_arr[5], pn[5], 1);
-    my_delay(1);
+    my_delay_us(20);
     digital_event(pn_arr[5], pn[5], 0);
-    my_delay(1);
+    my_delay_us(20);
 }
 void sendData(uint8_t data, bool rs)
 {
@@ -50,17 +50,20 @@ void lcdPrintChar(char data){
 }
 void lcdHome(){
 	sendData(0x80,0);
+    my_delay(2);
 }
 void lcdLine2(){
 	sendData(0xC0,0);
+    my_delay(2);
 }
 void lcdClear(){
 	sendData(0x01,0);
+    my_delay(2);
 }
 void lcd_module()
 {
     // D4 D5 D6 D7 RS E
-    delay_module();
+    // delay_module();
     for (int i = 0; i < 6; i++)
     {
         pin_config(pn_arr[i], pn[i], O);
@@ -68,8 +71,9 @@ void lcd_module()
     sendData(0x33, 0);
     sendData(0x32, 0);
     sendData(0x28, 0);
-    sendData(0x0E, 0);
+    sendData(0x0C, 0);
     sendData(0x01, 0);
+    my_delay(10);
 }
 
 

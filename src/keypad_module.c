@@ -4,11 +4,11 @@
 #include "../include/pin_module.h"
 
 //เเก้ขาตรงนี้นะะะ!!!!!!
-//              r1,r2,r3,r4
+//              r1,r2,r3,r4 //  ดำ
 char row_s[4] = {B, D, D, D};
 int row_pn[4] = {7, 5, 6, 7};
 
-//              c1,c2,c3,c4
+//              c1,c2,c3,c4 // ขาว
 char col_s[4] = {B, B, B, B};
 int col_pn[4] = {0, 1, 2, 3};
 
