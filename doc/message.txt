@@ -1,0 +1,226 @@
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/delay_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/pin_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/analog_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/ds1307_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/keypad_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/lcd_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/mcp_module.c)
+
+Read [](file:///c%3A/Users/User/Downloads/AVR_Exam-main/AVR_Exam-main/src/ultrasonic_module.c)
+
+### analog_module.c
+ไฟล์นี้ประกอบด้วยฟังก์ชันสำหรับการใช้งาน Analog-to-Digital Converter (ADC) บน AVR microcontroller โดยใช้ ADC registers เช่น ADMUX และ ADCSRA เพื่ออ่านค่า analog จากช่องทางต่างๆ และรองรับโหมด interrupt สำหรับการอ่านแบบ asynchronous.
+
+- **uint16_t analog_read(uint8_t n)**:  
+  ฟังก์ชันนี้ใช้สำหรับอ่านค่า analog จาก ADC channel ที่ระบุโดยพารามิเตอร์ `n` (0-7 สำหรับ AVR มาตรฐาน).  
+  - ตั้งค่า ADMUX register โดยเคลียร์ bits ต่ำ 4 bits แล้วตั้งค่า REFS0 สำหรับใช้ AVCC เป็น reference voltage และเลือก channel `n`.  
+  - เปิดใช้งาน ADC (ADEN), ตั้งค่า prescaler เป็น 128 (ADPS0, ADPS1, ADPS2) และเริ่ม conversion (ADSC).  
+  - รอจนกว่าการ conversion จะเสร็จสิ้นโดยตรวจสอบ ADIF flag ใน ADCSRA.  
+  - คืนค่า 16-bit จาก ADC register ซึ่งเป็นผลลัพธ์ของการแปลง analog เป็น digital (0-1023 สำหรับ 10-bit ADC).  
+  - ใช้ในกรณีต้องการอ่านค่า ADC แบบ synchronous โดยไม่ใช้ interrupt.
+
+- **void analog_interrup_mode(uint8_t n)**:  
+  ฟังก์ชันนี้ตั้งค่า ADC สำหรับการอ่านแบบ interrupt ที่ channel `n`.  
+  - ตั้งค่า ADMUX เหมือนกับ analog_read แต่ไม่รอการ conversion เสร็จสิ้นในฟังก์ชันนี้.  
+  - เปิดใช้งาน ADC และเริ่ม conversion ทันที เพื่อให้ interrupt handler จัดการเมื่อเสร็จ.  
+  - ใช้ร่วมกับ analog_interrupt_en เพื่อเปิดใช้งาน interrupt และ ISR สำหรับ ADC.
+
+- **void analog_interrupt_en()**:  
+  ฟังก์ชันนี้เปิดใช้งาน global interrupt (sei()) และ ADC interrupt (ADIE ใน ADCSRA).  
+  - อนุญาตให้ AVR ตอบสนองต่อ ADC conversion complete interrupt.  
+  - ใช้หลังจากตั้งค่า analog_interrup_mode เพื่อให้ระบบทำงานแบบ asynchronous.
+
+- **void analog_interrupt_dis()**:  
+  ฟังก์ชันนี้ปิดใช้งาน ADC interrupt โดยเคลียร์ ADIE bit ใน ADCSRA.  
+  - หยุดการ interrupt จาก ADC เพื่อป้องกันการรบกวนเมื่อไม่ต้องการ.  
+  - ใช้เมื่อต้องการเปลี่ยนกลับไปใช้โหมด polling หรือปิดการใช้งาน ADC ชั่วคราว.
+
+### delay_module.c
+ไฟล์นี้มีฟังก์ชันสำหรับสร้าง delay โดยใช้ Timer0 บน AVR โดยตั้งค่าในโหมด CTC (Clear Timer on Compare Match) เพื่อสร้างช่วงเวลาที่แม่นยำตามความถี่ clock (F_CPU = 8MHz).
+
+- **void my_delay(int t)**:  
+  ฟังก์ชันนี้สร้าง delay เป็นหน่วย millisecond (ms) โดยพารามิเตอร์ `t` คือจำนวน ms ที่ต้องการ.  
+  - ตั้งค่า TCCR0A ในโหมด CTC (WGM01) และ OCR0A = 125 เพื่อให้เกิด compare match ทุก 1 ms (ที่ 8MHz, prescaler 64 จาก CS01 และ CS00).  
+  - วน loop `t` ครั้ง แต่ละครั้งรีเซ็ต TCNT0 และรอจนกว่าการ compare จะเกิด (ตรวจสอบ OCF0A ใน TIFR0).  
+  - เคลียร์ flag และหยุด timer หลังแต่ละรอบเพื่อความแม่นยำ.  
+  - ใช้สำหรับ delay แบบ blocking ในโปรแกรมหลัก.
+
+- **void my_delay_us(int t)**:  
+  ฟังก์ชันนี้สร้าง delay เป็นหน่วย microsecond (μs) โดยพารามิเตอร์ `t` คือจำนวน μs.  
+  - ตั้งค่า TCCR0A ในโหมด CTC และ OCR0A = 8 เพื่อให้เกิด compare match ทุก 1 μs (ที่ 8MHz, prescaler 1 จาก CS00).  
+  - วน loop `t` ครั้ง แต่ละครั้งรีเซ็ต TCNT0 และรอ compare match.  
+  - เคลียร์ flag และหยุด timer หลังแต่ละรอบ.  
+  - เหมาะสำหรับ delay สั้นๆ ที่ต้องการความละเอียดสูง.
+
+### ds1307_module.c
+ไฟล์นี้มีฟังก์ชันสำหรับการสื่อสารกับ RTC (Real-Time Clock) DS1307 ผ่าน I2C (TWI) บน AVR รวมถึงฟังก์ชันแปลง BCD และการจัดการเวลา/วันที่. ใช้ TWI registers เช่น TWBR, TWSR, TWCR สำหรับการส่ง/รับข้อมูล.
+
+- **void TWI_Init()**:  
+  ฟังก์ชันนี้ initialize TWI bus สำหรับการสื่อสาร I2C.  
+  - ตั้งค่า TWBR = 32 และ TWSR = 0x00 เพื่อกำหนด bit rate เป็น 100 kHz ที่ F_CPU = 8MHz.  
+  - เปิดใช้งาน TWI (TWEN ใน TWCR).  
+  - ใช้ก่อนการสื่อสารกับ DS1307.
+
+- **void TWI_Start()**:  
+  ฟังก์ชันนี้ส่ง start condition บน TWI bus.  
+  - ตั้งค่า TWCR เพื่อส่ง TWINT, TWSTA, TWEN และรอจนกว่าการส่งจะเสร็จ (ตรวจสอบ TWINT).  
+  - ใช้เพื่อเริ่ม transaction I2C.
+
+- **void TWI_Write(uint8_t data)**:  
+  ฟังก์ชันนี้ส่ง data byte ไปยัง slave device.  
+  - โหลด data ลง TWDR และตั้งค่า TWCR เพื่อส่ง TWINT, TWEN แล้วรอจนเสร็จ.  
+  - ใช้สำหรับส่ง address หรือ data ใน I2C protocol.
+
+- **uint8_t TWI_Read(uint8_t ack)**:  
+  ฟังก์ชันนี้อ่าน data byte จาก slave device.  
+  - ตั้งค่า TWCR ตาม ack (TWEA สำหรับ acknowledge หรือไม่) และรอจนเสร็จ.  
+  - คืนค่า data จาก TWDR.  
+  - ack=1 สำหรับอ่านต่อ, ack=0 สำหรับอ่านครั้งสุดท้าย.
+
+- **void TWI_Stop()**:  
+  ฟังก์ชันนี้ส่ง stop condition บน TWI bus.  
+  - ตั้งค่า TWCR เพื่อส่ง TWINT, TWEN, TWSTO.  
+  - ใช้เพื่อจบ transaction I2C.
+
+- **uint8_t decToBcd(uint8_t val)**:  
+  ฟังก์ชันนี้แปลงค่า decimal (0-99) เป็น BCD (Binary-Coded Decimal).  
+  - คำนวณโดย (val / 10) << 4 | (val % 10).  
+  - ใช้สำหรับจัดเก็บเวลาใน DS1307 ซึ่งใช้ BCD format.
+
+- **uint8_t bcdToDec(uint8_t val)**:  
+  ฟังก์ชันนี้แปลงค่า BCD เป็น decimal.  
+  - คำนวณโดย (val >> 4) * 10 + (val & 0x0F).  
+  - ใช้สำหรับอ่านค่าเวลา/วันที่จาก DS1307.
+
+- **void rtc_module()**:  
+  ฟังก์ชันนี้ initialize DS1307 RTC โดยเริ่ม clock.  
+  - เรียก TWI_Init แล้วส่ง start, address (0xD0), register 0x00 และค่า 0x00 เพื่อ enable clock.  
+  - ใช้ครั้งเดียวในการ setup.
+
+- **void rtc_setDateTime(uint8_t h, uint8_t m, uint8_t s, uint8_t date, uint8_t month, uint8_t year)**:  
+  ฟังก์ชันนี้ตั้งเวลาและวันที่ใน DS1307.  
+  - ส่ง start, address, register 0x00 แล้วส่งค่า seconds, minutes, hours, day (dummy), date, month, year ในรูป BCD.  
+  - ใช้ decToBcd เพื่อแปลงก่อนส่ง.
+
+- **void rtc_getDateTime(uint8_t *h, uint8_t *m, uint8_t *s, uint8_t *date, uint8_t *month, uint8_t *year)**:  
+  ฟังก์ชันนี้อ่านเวลาและวันที่จาก DS1307.  
+  - ส่ง start, address, register 0x00 แล้ว restart และอ่านค่าในรูป BCD แล้วแปลงเป็น decimal ด้วย bcdToDec.  
+  - ข้าม day register และใช้ pointers เพื่อส่งค่ากลับ.
+
+- **char *monthName(uint8_t m)**:  
+  ฟังก์ชันนี้คืนชื่อเดือนเป็น string จากค่า month (1-12).  
+  - ใช้ switch case เพื่อ map เช่น 1 -> "Jan".  
+  - คืน "Err" ถ้าไม่ตรง.
+
+### keypad_module.c
+ไฟล์นี้มีฟังก์ชันสำหรับอ่านค่าจาก keypad 4x4 โดยใช้ matrix scanning กับ pins ที่กำหนดใน array row_s, row_pn, col_s, col_pn และ map กับ keyData array.
+
+- **char keypad_read()**:  
+  ฟังก์ชันนี้สแกน keypad เพื่อหาปุ่มที่กดและคืนตัวอักษร.  
+  - ตั้งค่า rows เป็น input, columns เป็น output ก่อน.  
+  - วนแต่ละ row ตั้งเป็น output และสแกน columns เป็น input เพื่อตรวจสอบการกด (digital_input == 0).  
+  - หากพบปุ่มกด คืนค่า keyData[r][c] หรือ 'N' ถ้าไม่พบ.  
+  - ใช้ polling แบบ synchronous และเรียก pin_config จาก pin_module.
+
+### lcd_module.c
+ไฟล์นี้มีฟังก์ชันสำหรับควบคุม LCD ในโหมด 4-bit โดยใช้ pins ที่กำหนดใน pn_arr และ pn รวมถึงเรียก delay จาก delay_module.
+
+- **void pushData()**:  
+  ฟังก์ชันนี้ส่ง enable pulse ให้ LCD.  
+  - ตั้งค่า enable pin (pn_arr[5], pn[5]) เป็น high 20 μs แล้ว low 20 μs.  
+  - ใช้หลังส่ง nibble เพื่อ latch data เข้า LCD.
+
+- **void sendData(uint8_t data, bool rs)**:  
+  ฟังก์ชันนี้ส่ง data/command ไป LCD ใน 4-bit mode.  
+  - ตั้งค่า RS pin ตาม rs (1 สำหรับ data, 0 สำหรับ command).  
+  - ส่ง upper nibble (data >> 4) และ lower nibble ตามลำดับ โดยเรียก pushData แต่ละครั้ง.  
+  - เคลียร์ RS หลังส่ง data.
+
+- **void lcdPrintString(char data[])**:  
+  ฟังก์ชันนี้พิมพ์ string ไป LCD.  
+  - วนส่งแต่ละตัวอักษรด้วย sendData(data[i], 1) จนถึง '\0'.  
+  - ใช้สำหรับแสดงข้อความหลายตัวอักษร.
+
+- **void lcdPrintChar(char data)**:  
+  ฟังก์ชันนี้พิมพ์ตัวอักษรเดียวไป LCD.  
+  - เรียก sendData(data, 1).  
+  - ใช้สำหรับแสดงตัวอักษรเดี่ยว.
+
+- **void lcdHome()**:  
+  ฟังก์ชันนี้ย้าย cursor ไปตำแหน่งแรกของบรรทัดแรก.  
+  - ส่ง command 0x80 และ delay 2 ms.  
+  - ใช้เพื่อ reset ตำแหน่ง cursor.
+
+- **void lcdLine2()**:  
+  ฟังก์ชันนี้ย้าย cursor ไปบรรทัดที่สอง.  
+  - ส่ง command 0xC0 และ delay 2 ms.  
+  - ใช้สำหรับเปลี่ยนบรรทัด.
+
+- **void lcdClear()**:  
+  ฟังก์ชันนี้ล้างหน้าจอ LCD.  
+  - ส่ง command 0x01 และ delay 2 ms.  
+  - ใช้เพื่อเคลียร์ display.
+
+- **void lcd_module()**:  
+  ฟังก์ชันนี้ initialize LCD ใน 4-bit mode.  
+  - ตั้งค่า pins เป็น output.  
+  - ส่ง initialization commands: 0x33, 0x32, 0x28, 0x0C, 0x01 และ delay 10 ms.  
+  - ใช้ครั้งเดียวในการ setup LCD.
+
+### mcp_module.c
+ไฟล์นี้มีฟังก์ชันสำหรับใช้งาน MCP3201 ADC ผ่าน SPI บน AVR โดยตั้งค่า SPI registers และอ่านค่า 12-bit.
+
+- **void mcp_module()**:  
+  ฟังก์ชันนี้ initialize SPI สำหรับ MCP3201.  
+  - ตั้งค่า pins: SCK (PB5) output, SS (PB2) output, MISO (PB4) input.  
+  - ตั้งค่า SS เป็น high และ SPI registers: SPE, MSTR, SPR0 สำหรับ master mode และ SPI2X สำหรับ double speed.  
+  - ใช้ก่อนการอ่าน ADC.
+
+- **uint16_t mcp_read()**:  
+  ฟังก์ชันนี้อ่านค่า ADC จาก MCP3201.  
+  - ตั้งค่า SS low เพื่อเริ่ม transaction.  
+  - ส่ง dummy byte 2 ครั้งและอ่าน highByte และ lowByte จาก SPDR.  
+  - ตั้งค่า SS high และคำนวณค่า 12-bit: (((highByte & 0x1F) << 8) | lowByte) >> 1.  
+  - คืนค่า ADC (0-4095).
+
+### pin_module.c
+ไฟล์นี้มีฟังก์ชันพื้นฐานสำหรับจัดการ digital pins บน AVR โดยใช้ DDR, PORT, PIN registers สำหรับ ports B, D, C.
+
+- **void pin_config(char g, uint8_t n, char m)**:  
+  ฟังก์ชันนี้ตั้งค่า pin ที่ port g (B/D/C), pin n เป็น mode m (I=input, O=output).  
+  - สำหรับ input: เคลียร์ DDR และตั้ง PORT (pull-up).  
+  - สำหรับ output: ตั้ง DDR และเคลียร์ PORT (low).  
+  - ใช้เพื่อกำหนดทิศทาง pin ก่อนใช้งาน.
+
+- **void digital_event(char g, uint8_t n, int v)**:  
+  ฟังก์ชันนี้ตั้งค่า digital output ที่ pin g n เป็นค่า v (0=low, 1=high).  
+  - ใช้ PORT register เพื่อ toggle bit.  
+  - ใช้สำหรับควบคุม output pins.
+
+- **uint8_t digital_input(char g, uint8_t n)**:  
+  ฟังก์ชันนี้อ่าน digital input จาก pin g n.  
+  - ตรวจสอบ bit ใน PIN register และคืน 1 หรือ 0.  
+  - ใช้สำหรับอ่านสถานะ input pins.
+
+### ultrasonic_module.c
+ไฟล์นี้มีฟังก์ชันและ ISR สำหรับใช้งาน ultrasonic sensor โดยใช้ Timer1 สำหรับ input capture วัด echo pulse และ Timer2 สำหรับ PWM trigger.
+
+- **ISR(TIMER1_CAPT_vect)**:  
+  Interrupt service routine สำหรับ Timer1 input capture.  
+  - ตรวจสอบ ICES1 เพื่อสลับ edge (rising/falling).  
+  - บันทึก startTrick และ endTrick จาก ICR1.  
+  - คำนวณ duration = (endTrick - startTrick) / 31250.0 (สำหรับ prescaler 1024 ที่ 8MHz).  
+  - คำนวณ distance = 17300 * duration (โดยใช้ความเร็วเสียง 343 m/s ที่ 25°C).  
+  - ใช้เพื่อวัดระยะทางแบบ real-time.
+
+- **void ultrasonic_begin()**:  
+  ฟังก์ชันนี้ initialize ultrasonic sensor.  
+  - ตั้งค่า Timer1: prescaler 1024, enable input capture interrupt (ICIE1), rising edge (ICES1), และ global interrupt.  
+  - ตั้งค่า Timer2 สำหรับ PWM: Fast PWM mode, non-inverting, prescaler 256, OCR2A สำหรับ duty cycle 10% เพื่อสร้าง trigger pulse ที่ PB3.  
+  - ใช้ครั้งเดียวในการ setup.

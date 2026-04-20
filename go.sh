@@ -21,3 +21,4 @@ echo "*********** convert to intel hex ***********"
 avrdude -c usbasp -p m328p -B 2 -b 11250 -U flash:w:./${fileName}.hex
 rm ${fileName}.o
 rm ${fileName}.elf
+rm ${fileName}.hex
