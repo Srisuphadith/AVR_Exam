@@ -7,9 +7,12 @@ avr-gcc -mmcu=atmega328p -c ./src/lcd_module.c -o ./src/lcd_module.o
 avr-gcc -mmcu=atmega328p -c ./src/mcp_module.c -o ./src/mcp_module.o
 avr-gcc -mmcu=atmega328p -c ./src/pin_module.c -o ./src/pin_module.o
 avr-gcc -mmcu=atmega328p -c ./src/ultrasonic_module.c -o ./src/ultrasonic_module.o
+avr-gcc -mmcu=atmega328p -c ./src/twi_module.c -o ./src/twi_module.o
+avr-gcc -mmcu=atmega328p -c ./src/oled_module.c -o ./src/oled_module.o
 echo "*********** complie .o success ***********"
 avr-ar rcs ./lib/libmy-avr-lib.a ./src/analog_module.o ./src/delay_module.o ./src/keypad_module.o \
-    ./src/lcd_module.o ./src/mcp_module.o ./src/pin_module.o ./src/ultrasonic_module.o ./src/ds1307_module.o
+    ./src/lcd_module.o ./src/mcp_module.o ./src/pin_module.o ./src/ultrasonic_module.o ./src/ds1307_module.o \
+    ./src/twi_module.o ./src/oled_module.o
 rm ./src/*.o
 echo "*********** make lib success ***********"
 avr-gcc -mmcu=atmega328p -c -Os ${fileName}.c -o ${fileName}.o
