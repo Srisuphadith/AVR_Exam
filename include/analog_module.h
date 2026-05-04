@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+void analog_module();
 uint16_t analog_read(uint8_t n);
 void analog_interrupt_en();
 void analog_interrupt_dis();

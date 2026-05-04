@@ -3,7 +3,7 @@
 
 void TWI_Init()
 {
-    TWBR = 32;
+    TWBR = 2;
     TWSR = 0x00;
     TWCR = (1 << TWEN);
 }

@@ -12,7 +12,7 @@ avr-ar rcs ./lib/libmy-avr-lib.a ./src/analog_module.o ./src/delay_module.o ./sr
     ./src/lcd_module.o ./src/mcp_module.o ./src/pin_module.o ./src/ultrasonic_module.o ./src/ds1307_module.o
 rm ./src/*.o
 echo "*********** make lib success ***********"
-avr-gcc -mmcu=atmega328p -c ${fileName}.c -o ${fileName}.o
+avr-gcc -mmcu=atmega328p -c -Os ${fileName}.c -o ${fileName}.o
 echo "*********** compile ${fileName}.c ***********"
 avr-gcc -mmcu=atmega328p ${fileName}.o -Llib -lmy-avr-lib -o ${fileName}.elf
 echo "*********** link ${fileName}.c with lib ***********"
