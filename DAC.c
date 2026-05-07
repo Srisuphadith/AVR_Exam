@@ -125,14 +125,14 @@ ISR(INT1_vect)
 }
 ISR(TIMER0_COMPA_vect)
 {
-    if (!(digital_input(B, 0)))
+    if (!(digital_input(D, 4)))
     {
-        PORTB ^= 0x02;
+        PORTD ^= 0x40;
         st_select = ~st_select;
-        digital_event(B, 2, 1);
-        while (!digital_input(B, 0))
+        digital_event(D, 5, 1);
+        while (!digital_input(D, 4))
             ;
-        digital_event(B, 2, 0);
+        digital_event(D, 5, 0);
     }
 }
 ISR(ADC_vect)
@@ -152,11 +152,11 @@ ISR(ADC_vect)
     }
 }
 void rotary_encoder_init(){
-    pin_config(B, 0, I);
-    pin_config(B, 1, O);
+    pin_config(D, 4, I);
+    //pin_config(B, 1, O);
     pin_config(D, 3, I);
     pin_config(D, 2, I);
-    pin_config(B, 2, O);
+    //pin_config(B, 2, O);
     st_a = !digital_input(D, 2);
     st_b = !digital_input(D, 3);
 
@@ -165,11 +165,11 @@ void rotary_encoder_init(){
 }
 void adc_auto_trigger_init(){
     // ADC
-    ADMUX = (1 << REFS0);
+    ADMUX = (1 << REFS0) | 2;
     ADCSRA = (1 << ADEN) | (1 << ADATE) | (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
     ADCSRB = (1 << ADTS0) | (1 << ADTS1);
     ADCSRB &= ~(1 << ADTS2);
-    DIDR0 = (1 << ADC0D);
+    DIDR0 = (1 << ADC2D);
 }
 void counter0_auto_trigger_adc_init(){
     // counter0
@@ -183,6 +183,10 @@ void counter0_auto_trigger_adc_init(){
 }
 void setup()
 {
+    pin_config(D, 6, O);
+    pin_config(D, 5, O);
+    //digital_event(D,6,1);
+    //PORTD = 0x40;
     rotary_encoder_init();
     adc_auto_trigger_init();
     counter0_auto_trigger_adc_init();
