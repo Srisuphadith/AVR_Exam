@@ -152,11 +152,10 @@ ISR(ADC_vect)
     }
 }
 void rotary_encoder_init(){
-    pin_config(D, 4, I);
-    //pin_config(B, 1, O);
-    pin_config(D, 3, I);
-    pin_config(D, 2, I);
-    //pin_config(B, 2, O);
+    pin_config(D, 4, I); //SW
+
+    pin_config(D, 3, I); //CLK
+    pin_config(D, 2, I); //DT
     st_a = !digital_input(D, 2);
     st_b = !digital_input(D, 3);
 
@@ -183,23 +182,33 @@ void counter0_auto_trigger_adc_init(){
 }
 void setup()
 {
-    pin_config(D, 6, O);
-    pin_config(D, 5, O);
-    //digital_event(D,6,1);
-    //PORTD = 0x40;
-    rotary_encoder_init();
-    adc_auto_trigger_init();
-    counter0_auto_trigger_adc_init();
-    OLED_init();
+    // pin_config(D, 6, O);
+    // pin_config(D, 5, O);
 
-    OLED_clear();
-    OLED_clear_buffer();
+    // rotary_encoder_init();
+    // adc_auto_trigger_init();
+    // counter0_auto_trigger_adc_init();
+    // OLED_init();
 
-    Oscilloscope_scale();
-    OLED_update();
+    // OLED_clear();
+    // OLED_clear_buffer();
+
+    // Oscilloscope_scale();
+    // OLED_update();
+
+    DDRB = 0xFF;
 }
 void loop()
 {
+    for(int i = 0; i < 255;i++){
+        PORTB = (uint8_t)i;
+        _delay_ms(5);
+    }
+        for(int i = 255; i > 0;i--){
+        PORTB = (uint8_t)i;
+        _delay_ms(5);
+    }
+
     
 }
 
