@@ -6,18 +6,18 @@
 #include "./include/oled_module.h"
 #include "./include/pin_module.h"
 
-
 int rotary_value = 0;
 uint8_t multipile = 20;
-uint8_t st_select = 0;
+uint8_t conf_select = 0;
 uint8_t st_a, st_b;
 uint8_t origin_y = 32;
 uint8_t origin_x = 0;
 uint8_t scale_x = 10;
 uint8_t scale_y = 10;
 uint8_t cnt = 0;
+int mode = 0;
 
-
+//draw scale
 void Oscilloscope_scale()
 {
     for (int i = 0 + origin_x; i < 128 + origin_x; i++)
@@ -37,9 +37,8 @@ void Oscilloscope_scale()
             }
         }
     }
-    // OLED_update();
 }
-
+//Rotary Encoder 1
 ISR(INT0_vect)
 {
     int a = !digital_input(D, 2);
@@ -47,7 +46,7 @@ ISR(INT0_vect)
 
     if (a == b)
     {
-        if (st_select == 0)
+        if (conf_select == 0)
         {
             rotary_value--;
         }
@@ -58,7 +57,7 @@ ISR(INT0_vect)
     }
     else
     {
-        if (st_select == 0)
+        if (conf_select == 0)
         {
             rotary_value++;
         }
@@ -82,6 +81,7 @@ ISR(INT0_vect)
     st_b = b;
 }
 
+//Rotary Encoder 2
 ISR(INT1_vect)
 {
     int a = !digital_input(D, 2);
@@ -89,7 +89,7 @@ ISR(INT1_vect)
 
     if (a == b)
     {
-        if (st_select == 0)
+        if (conf_select == 0)
         {
             rotary_value++;
         }
@@ -100,7 +100,7 @@ ISR(INT1_vect)
     }
     else
     {
-        if (st_select == 0)
+        if (conf_select == 0)
         {
             rotary_value--;
         }
@@ -123,18 +123,21 @@ ISR(INT1_vect)
     st_a = a;
     st_b = b;
 }
+//Counter0
 ISR(TIMER0_COMPA_vect)
 {
     if (!(digital_input(D, 4)))
     {
         PORTD ^= 0x40;
-        st_select = ~st_select;
+        conf_select = ~conf_select;
         digital_event(D, 5, 1);
         while (!digital_input(D, 4))
             ;
         digital_event(D, 5, 0);
     }
 }
+
+//Oscilloscope
 ISR(ADC_vect)
 {
     if (cnt < 128)
@@ -151,65 +154,94 @@ ISR(ADC_vect)
         Oscilloscope_scale();
     }
 }
-void rotary_encoder_init(){
-    pin_config(D, 4, I); //SW
-
-    pin_config(D, 3, I); //CLK
-    pin_config(D, 2, I); //DT
+void rotary_encoder_init()
+{
+    // rotary pin configuration
+    pin_config(D, 4, I); // SW
+    pin_config(D, 3, I); // CLK
+    pin_config(D, 2, I); // DT
+    // Save initial state of rotary encoder
     st_a = !digital_input(D, 2);
     st_b = !digital_input(D, 3);
-
+    // INT0 INT1 set rising edge mode
     EICRA |= (1 << ISC01) | (1 << ISC00) | (1 << ISC10) | (1 << ISC11);
+    // Enable Interrupt INT0,INT1
     EIMSK |= (1 << INT0) | (1 << INT1);
 }
-void adc_auto_trigger_init(){
-    // ADC
+void adc_auto_trigger_init()
+{
+    // Initial ADC2 for oscilloscope mode
+    // set internal refferent voltage and select ADC2
     ADMUX = (1 << REFS0) | 2;
+    // Enable adc, set auto trigger mode, Enable Interrupt, prescalar 128
     ADCSRA = (1 << ADEN) | (1 << ADATE) | (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
+    // select counter 0 compare match OCR0A to auto trigger
     ADCSRB = (1 << ADTS0) | (1 << ADTS1);
     ADCSRB &= ~(1 << ADTS2);
+    // Disable digital on ADC2
     DIDR0 = (1 << ADC2D);
 }
-void counter0_auto_trigger_adc_init(){
-    // counter0
+void counter0_auto_trigger_adc_init()
+{
+    // Initial counter0 for adc auto trigger mode with compare match OCR0A
     OCR0A = 1;
     TCNT0 = 0;
     TCCR0A = (1 << WGM01);
+    // prescalar 1024
     TCCR0B = (1 << CS02) | (1 << CS00);
+    // Enable Interrupt Compare match OCR0A
     TIMSK0 |= (1 << OCIE0A);
     sei();
+    // Fist start
     ADCSRA |= (1 << ADSC);
 }
 void setup()
 {
-    // pin_config(D, 6, O);
-    // pin_config(D, 5, O);
+    // LED
+    pin_config(D, 6, O);
+    // Buzzer
+    pin_config(D, 5, O);
 
-    // rotary_encoder_init();
-    // adc_auto_trigger_init();
-    // counter0_auto_trigger_adc_init();
-    // OLED_init();
+    rotary_encoder_init();
 
-    // OLED_clear();
-    // OLED_clear_buffer();
+    adc_auto_trigger_init();
+    counter0_auto_trigger_adc_init();
 
-    // Oscilloscope_scale();
-    // OLED_update();
+    OLED_init();
+    OLED_clear();
+    OLED_clear_buffer();
+    Oscilloscope_scale();
+    OLED_update();
 
+    // set DAC output pin
     DDRB = 0xFF;
+}
+void component_tester()
+{
+    // disable auto trigger
+    // disable adc interrupt
+    while (1)
+    {
+        // for (int i = 0; i < 255; i++)
+        // {
+        //     PORTB = (uint8_t)i;
+        //     _delay_ms(2);
+        // }
+        // for (int i = 255; i > 0; i--)
+        // {
+        //     PORTB = (uint8_t)i;
+        //     _delay_ms(2);
+        // }
+        if (mode == 0)
+        {
+            adc_auto_trigger_init();
+            counter0_auto_trigger_adc_init();
+            break;
+        }
+    }
 }
 void loop()
 {
-    for(int i = 0; i < 255;i++){
-        PORTB = (uint8_t)i;
-        _delay_ms(5);
-    }
-        for(int i = 255; i > 0;i--){
-        PORTB = (uint8_t)i;
-        _delay_ms(5);
-    }
-
-    
 }
 
 void main()
