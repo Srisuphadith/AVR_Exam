@@ -16,8 +16,10 @@ uint8_t scale_x = 10;
 uint8_t scale_y = 10;
 uint8_t cnt = 0;
 int mode = 0;
-
-//draw scale
+uint8_t dac_value = 0;
+int dac_st = 0;
+int t = 0;
+// draw scale
 void Oscilloscope_scale()
 {
     for (int i = 0 + origin_x; i < 128 + origin_x; i++)
@@ -38,7 +40,7 @@ void Oscilloscope_scale()
         }
     }
 }
-//Rotary Encoder 1
+// Rotary Encoder 1
 ISR(INT0_vect)
 {
     int a = !digital_input(D, 2);
@@ -81,7 +83,7 @@ ISR(INT0_vect)
     st_b = b;
 }
 
-//Rotary Encoder 2
+// Rotary Encoder 2
 ISR(INT1_vect)
 {
     int a = !digital_input(D, 2);
@@ -123,21 +125,65 @@ ISR(INT1_vect)
     st_a = a;
     st_b = b;
 }
-//Counter0
+void component_tester()
+{
+    // disable auto trigger
+    // disable adc interrupt
+    while (1)
+    {
+        for (int i = 0; i < 255; i++)
+        {
+            PORTB = (uint8_t)i;
+            _delay_ms(5);
+        }
+        for (int i = 255; i > 0; i--)
+        {
+            PORTB = (uint8_t)i;
+            _delay_ms(5);
+        }
+    }
+}
+// Counter0
 ISR(TIMER0_COMPA_vect)
 {
-    if (!(digital_input(D, 4)))
+    if (!(digital_input(D, 4)) && mode == 0)
     {
+        // toggle LED status mode
         PORTD ^= 0x40;
-        conf_select = ~conf_select;
+        // toggle mode
+        conf_select = !conf_select;
+        // on buzzer
         digital_event(D, 5, 1);
+        TCNT1 = 0;
         while (!digital_input(D, 4))
             ;
+        uint16_t t1 = TCNT1;
+        if (t1 > 7812)
+        {
+            OCR0A = 255;
+            mode = 1;
+            PORTD &= ~(0x40);
+            digital_event(D, 5, 0);
+            ADMUX &= ~(0x02);
+            ADMUX = 0x01;
+        }
+        // off buzzer
         digital_event(D, 5, 0);
+    }
+    else if (mode == 1)
+    {
+        if (!(digital_input(D, 4)))
+        {
+            PORTD ^= 0x40;
+            conf_select = !conf_select;
+            while (!digital_input(D, 4))
+                ;
+        }
+            
     }
 }
 
-//Oscilloscope
+// Oscilloscope
 ISR(ADC_vect)
 {
     if (cnt < 128)
@@ -179,7 +225,7 @@ void adc_auto_trigger_init()
     ADCSRB = (1 << ADTS0) | (1 << ADTS1);
     ADCSRB &= ~(1 << ADTS2);
     // Disable digital on ADC2
-    DIDR0 = (1 << ADC2D);
+    DIDR0 = (1 << ADC2D) | (1 << ADC1D) | (1 << ADC0D);
 }
 void counter0_auto_trigger_adc_init()
 {
@@ -195,6 +241,11 @@ void counter0_auto_trigger_adc_init()
     // Fist start
     ADCSRA |= (1 << ADSC);
 }
+void conter1_enable()
+{
+    TCNT1 = 0;
+    TCCR1B = (1 << CS12) | (1 << CS10);
+}
 void setup()
 {
     // LED
@@ -206,6 +257,7 @@ void setup()
 
     adc_auto_trigger_init();
     counter0_auto_trigger_adc_init();
+    conter1_enable();
 
     OLED_init();
     OLED_clear();
@@ -215,33 +267,12 @@ void setup()
 
     // set DAC output pin
     DDRB = 0xFF;
+    // PORTB = 65;
 }
-void component_tester()
-{
-    // disable auto trigger
-    // disable adc interrupt
-    while (1)
-    {
-        // for (int i = 0; i < 255; i++)
-        // {
-        //     PORTB = (uint8_t)i;
-        //     _delay_ms(2);
-        // }
-        // for (int i = 255; i > 0; i--)
-        // {
-        //     PORTB = (uint8_t)i;
-        //     _delay_ms(2);
-        // }
-        if (mode == 0)
-        {
-            adc_auto_trigger_init();
-            counter0_auto_trigger_adc_init();
-            break;
-        }
-    }
-}
+
 void loop()
 {
+    //component_tester();
 }
 
 void main()
