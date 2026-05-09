@@ -20,13 +20,13 @@ int mode = 0;
 bool ready = 0;
 uint8_t DAC_value = 0;
 bool DAC_st;
+bool is_cnt1_int_mode = false;
 // ###############################
 // #     PROTOTYPE FUNCTION      #
 // ###############################
 void Oscilloscope_scale();
 void rotary_handle(int direction);
 void change_mode_and_config(int m);
-void component_tester();
 void rotary_encoder_init();
 void adc_auto_trigger_init();
 void counter0_auto_trigger_adc_init();
@@ -95,7 +95,6 @@ void rotary_handle(int direction)
     st_a = a;
     st_b = b;
 }
-int b = 0;
 void change_mode_and_config(int m)
 {
     // toggle mode
@@ -108,7 +107,7 @@ void change_mode_and_config(int m)
     digital_event(D, 5, 0);
     if (TIMSK1 & (1 << OCIE1A))
     {
-        b = 1;
+        is_cnt1_int_mode = true;
     }
     conter1_enable_ovf_init();
     while (!digital_input(D, 4))
@@ -127,39 +126,24 @@ void change_mode_and_config(int m)
         else
         {
             conter1_enable_ovf_init();
+            ADCSRA |= (1 << ADATE) | (1 << ADIE);
+            ADMUX &= ~(0x0F);
+            ADMUX |= 2;
+            ADCSRA |= (1 << ADSC);
+            PORTB = 0;
+            is_cnt1_int_mode = false;
         }
         conf_select = 0;
         PORTD = ((uint8_t)conf_select << DDD6);
     }
-    if (b == 1)
+    if (is_cnt1_int_mode)
     {
         conter1_enable_OCR1A_init();
-        b = 0;
+        is_cnt1_int_mode = false;
     }
     _delay_ms(50);
 }
-void component_tester()
-{
-    // disable auto trigger
-    // disable adc interrupt
-    while (1)
-    {
-        for (int i = 0; i < 255; i++)
-        {
-            PORTB = (uint8_t)i;
-            _delay_ms(4);
-        }
-        for (int i = 255; i > 0; i--)
-        {
-            PORTB = (uint8_t)i;
-            _delay_ms(4);
-        }
-        if (mode == 0)
-        {
-            break;
-        }
-    }
-}
+
 // ###############################
 // #        INTERRUPT ZONE       #
 // ###############################
@@ -214,9 +198,9 @@ ISR(TIMER1_COMPA_vect)
     uint16_t v1 = ADC;
 
     // voltage = ((DAC_value * 0.0196)*32)/5;
-    voltage = (v1-v0) >> 2;
+    voltage = (v1 - v0) >> 2;
     current = (v0) >> 2;
-    OLED_drawPixel(voltage+multipile,32-current*rotary_value);
+    OLED_drawPixel(voltage + multipile, 32 - current * rotary_value);
     if (DAC_value == 255)
     {
         ready = 1;
@@ -290,7 +274,9 @@ void pinchange_interrupt_init()
 void conter1_enable_ovf_init()
 {
     TCNT1 = 0;
+    TCCR1B &= ~(1 << WGM12);
     TCCR1B = (1 << CS12) | (1 << CS10);
+    TIMSK1 = 0;
 }
 void conter1_enable_OCR1A_init()
 {
