@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-
+#include <stdlib.h>
 #include "./include/oled_module.h"
 #include "./include/pin_module.h"
 
@@ -17,8 +17,22 @@ uint8_t conf_select = 0;
 uint8_t st_a, st_b;
 uint8_t cnt = 0;
 int mode = 0;
-int ready = 0;
-
+bool ready = 0;
+uint8_t DAC_value = 0;
+bool DAC_st;
+// ###############################
+// #     PROTOTYPE FUNCTION      #
+// ###############################
+void Oscilloscope_scale();
+void rotary_handle(int direction);
+void change_mode_and_config(int m);
+void component_tester();
+void rotary_encoder_init();
+void adc_auto_trigger_init();
+void counter0_auto_trigger_adc_init();
+void pinchange_interrupt_init();
+void conter1_enable_ovf_init();
+void conter1_enable_OCR1A_init();
 // ###############################
 // #        UTILS FUNCTION       #
 // ###############################
@@ -47,29 +61,22 @@ void rotary_handle(int direction)
     uint8_t a = !(PIND & (1 << PD2));
     uint8_t b = !(PIND & (1 << PD3));
     int rotary_tmp1 = rotary_value;
-    if (direction == 0)
+    if (a == b && direction == 0)
     {
-        if (a == b)
-        {
-            rotary_value--;
-        }
-        else
-        {
-            rotary_value++;
-        }
+        rotary_value--;
+    }
+    else if (direction == 0)
+    {
+        rotary_value++;
+    }
+    else if (a == b && direction == 1)
+    {
+        rotary_value++;
     }
     else if (direction == 1)
     {
-        if (a == b)
-        {
-            rotary_value++;
-        }
-        else
-        {
-            rotary_value--;
-        }
+        rotary_value--;
     }
-
     int rotary_tmp2 = rotary_value;
     if (rotary_value > 255)
         rotary_value = 255;
@@ -88,6 +95,7 @@ void rotary_handle(int direction)
     st_a = a;
     st_b = b;
 }
+int b = 0;
 void change_mode_and_config(int m)
 {
     // toggle mode
@@ -98,17 +106,37 @@ void change_mode_and_config(int m)
     digital_event(D, 5, 1);
     _delay_ms(20);
     digital_event(D, 5, 0);
-    TCNT1 = 0;
+    if (TIMSK1 & (1 << OCIE1A))
+    {
+        b = 1;
+    }
+    conter1_enable_ovf_init();
     while (!digital_input(D, 4))
         ;
     uint16_t t1 = TCNT1;
     if (t1 > 7812)
     {
         mode = m;
+        if (m == 1)
+        {
+            OCR1A = 2;
+            conter1_enable_OCR1A_init();
+            ADCSRA &= ~((1 << ADATE) | (1 << ADIE));
+            ADMUX &= ~(0x0F);
+        }
+        else
+        {
+            conter1_enable_ovf_init();
+        }
         conf_select = 0;
         PORTD = ((uint8_t)conf_select << DDD6);
     }
-    _delay_ms(100);
+    if (b == 1)
+    {
+        conter1_enable_OCR1A_init();
+        b = 0;
+    }
+    _delay_ms(50);
 }
 void component_tester()
 {
@@ -156,9 +184,44 @@ ISR(PCINT2_vect)
         change_mode_and_config(0);
     }
 }
-ISR(TIMER0_COMPA_vect) 
+ISR(TIMER0_COMPA_vect)
 {
+}
+int voltage, current;
+ISR(TIMER1_COMPA_vect)
+{
+    PORTB = DAC_value;
 
+    ADMUX &= ~(0x0F);
+    ADCSRA |= (1 << ADIF);
+    ADCSRA |= (1 << ADSC);
+    while (!(ADCSRA & (1 << ADIF)))
+        ;
+    ADCSRA |= (1 << ADIF);
+    ADCSRA |= (1 << ADSC);
+    while (!(ADCSRA & (1 << ADIF)))
+        ;
+    uint16_t v0 = ADC;
+    ADMUX |= (0x01);
+    ADCSRA |= (1 << ADIF);
+    ADCSRA |= (1 << ADSC);
+    while (!(ADCSRA & (1 << ADIF)))
+        ;
+    ADCSRA |= (1 << ADIF);
+    ADCSRA |= (1 << ADSC);
+    while (!(ADCSRA & (1 << ADIF)))
+        ;
+    uint16_t v1 = ADC;
+
+    // voltage = ((DAC_value * 0.0196)*32)/5;
+    voltage = (v1-v0) >> 2;
+    current = (v0) >> 2;
+    OLED_drawPixel(voltage+multipile,32-current*rotary_value);
+    if (DAC_value == 255)
+    {
+        ready = 1;
+    }
+    DAC_value++;
 }
 ISR(ADC_vect)
 {
@@ -224,10 +287,16 @@ void pinchange_interrupt_init()
     PCICR = (1 << PCIE2);
     PCMSK2 = (1 << PCINT20);
 }
-void conter1_enable()
+void conter1_enable_ovf_init()
 {
     TCNT1 = 0;
     TCCR1B = (1 << CS12) | (1 << CS10);
+}
+void conter1_enable_OCR1A_init()
+{
+    TCNT1 = 0;
+    TCCR1B = (1 << CS12) | (1 << CS10) | (1 << WGM12);
+    TIMSK1 = (1 << OCIE1A);
 }
 // ###############################
 // #      END INNITIAL ZONE      #
@@ -246,7 +315,7 @@ void setup()
     rotary_encoder_init();
     adc_auto_trigger_init();
     counter0_auto_trigger_adc_init();
-    conter1_enable();
+    conter1_enable_ovf_init();
     OLED_init();
     OLED_clear();
     OLED_clear_buffer();
@@ -256,7 +325,7 @@ void setup()
 }
 void loop()
 {
-    if (ready == 1 && mode == 0)
+    if (ready && mode == 0)
     {
         cli();
         OLED_update();
@@ -265,9 +334,14 @@ void loop()
         ready = 0;
         sei();
     }
-    else if (mode == 1)
+    else if (ready && mode == 1)
     {
-        component_tester();
+        cli();
+        OLED_update();
+        OLED_clear_buffer();
+        Oscilloscope_scale();
+        ready = 0;
+        sei();
     }
 }
 void main()
