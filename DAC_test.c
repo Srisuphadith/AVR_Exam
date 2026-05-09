@@ -6,19 +6,23 @@
 #include "./include/oled_module.h"
 #include "./include/pin_module.h"
 
-int multipile = 20;
+uint8_t adc_buff;
+
+int multipile_x = 20;
+int multipile_y = 20;
 uint8_t origin_y = 32;
 uint8_t origin_x = 0;
 uint8_t scale_x = 10;
 uint8_t scale_y = 10;
 
+int voltage, current;
 int rotary_value = 0;
 uint8_t conf_select = 0;
 uint8_t st_a, st_b;
 uint8_t cnt = 0;
-int mode = 0;
-bool ready = 0;
+uint8_t mode = 0;
 uint8_t DAC_value = 0;
+bool ready = false;
 bool DAC_st;
 bool is_cnt1_int_mode = false;
 // ###############################
@@ -33,6 +37,7 @@ void counter0_auto_trigger_adc_init();
 void pinchange_interrupt_init();
 void conter1_enable_ovf_init();
 void conter1_enable_OCR1A_init();
+void component_tester();
 // ###############################
 // #        UTILS FUNCTION       #
 // ###############################
@@ -87,10 +92,11 @@ void rotary_handle(int direction)
     if (conf_select == 0)
     {
         OCR0A = rotary_value;
+        multipile_y += rotary_tmp2 - rotary_tmp1;
     }
     else
     {
-        multipile += rotary_tmp2 - rotary_tmp1;
+        multipile_x += rotary_tmp2 - rotary_tmp1;
     }
     st_a = a;
     st_b = b;
@@ -118,7 +124,7 @@ void change_mode_and_config(int m)
         mode = m;
         if (m == 1)
         {
-            OCR1A = 2;
+            OCR1A = 1;
             conter1_enable_OCR1A_init();
             ADCSRA &= ~((1 << ADATE) | (1 << ADIE));
             ADMUX &= ~(0x0F);
@@ -143,36 +149,7 @@ void change_mode_and_config(int m)
     }
     _delay_ms(50);
 }
-
-// ###############################
-// #        INTERRUPT ZONE       #
-// ###############################
-// Rotary Encoder 1
-
-ISR(INT0_vect)
-{
-    rotary_handle(0);
-}
-ISR(INT1_vect)
-{
-    rotary_handle(1);
-}
-ISR(PCINT2_vect)
-{
-    if (!digital_input(D, 4) && mode == 0)
-    {
-        change_mode_and_config(1);
-    }
-    else if (!digital_input(D, 4) && mode == 1)
-    {
-        change_mode_and_config(0);
-    }
-}
-ISR(TIMER0_COMPA_vect)
-{
-}
-int voltage, current;
-ISR(TIMER1_COMPA_vect)
+void component_tester()
 {
     PORTB = DAC_value;
 
@@ -197,21 +174,57 @@ ISR(TIMER1_COMPA_vect)
         ;
     uint16_t v1 = ADC;
 
-    // voltage = ((DAC_value * 0.0196)*32)/5;
-    voltage = (v1 - v0) >> 2;
-    current = (v0) >> 2;
-    OLED_drawPixel(voltage + multipile, 32 - current * rotary_value);
+
+    voltage = (((int)v1) * 128) >> 10;
+    current = (((int)v0) * 100) >> 10;
+    if(cnt >= 127-50 && cnt < 255-50){
+        OLED_drawPixel(voltage + multipile_y,64-current - multipile_x);
+    }
+    cnt++;
     if (DAC_value == 255)
     {
+        cnt = 0;
         ready = 1;
+        DAC_value = 0;
     }
     DAC_value++;
+}
+
+// ###############################
+// #        INTERRUPT ZONE       #
+// ###############################
+// Rotary Encoder 1
+ISR(TIMER0_COMPA_vect)
+{
+}
+ISR(TIMER1_COMPA_vect)
+{
+    component_tester();
+}
+ISR(INT0_vect)
+{
+    rotary_handle(0);
+}
+ISR(INT1_vect)
+{
+    rotary_handle(1);
+}
+ISR(PCINT2_vect)
+{
+    if (!digital_input(D, 4) && mode == 0)
+    {
+        change_mode_and_config(1);
+    }
+    else if (!digital_input(D, 4) && mode == 1)
+    {
+        change_mode_and_config(0);
+    }
 }
 ISR(ADC_vect)
 {
     if (cnt < 128)
     {
-        int adc_buff = (ADC / 1024.0) * multipile;
+        adc_buff = (ADC * multipile_x) >> 10;
         OLED_drawPixel(cnt, origin_y - adc_buff);
         cnt++;
     }
@@ -285,7 +298,7 @@ void conter1_enable_OCR1A_init()
     TIMSK1 = (1 << OCIE1A);
 }
 // ###############################
-// #      END INNITIAL ZONE      #
+// #      MAIN PROGRAM ZONE      #
 // ###############################
 
 void setup()
@@ -311,22 +324,13 @@ void setup()
 }
 void loop()
 {
-    if (ready && mode == 0)
+    if (ready)
     {
         cli();
         OLED_update();
         OLED_clear_buffer();
         Oscilloscope_scale();
-        ready = 0;
-        sei();
-    }
-    else if (ready && mode == 1)
-    {
-        cli();
-        OLED_update();
-        OLED_clear_buffer();
-        Oscilloscope_scale();
-        ready = 0;
+        ready = false;
         sei();
     }
 }
