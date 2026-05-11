@@ -1,30 +1,35 @@
 #define F_CPU 8000000UL
+#define SLICE_WINDOWN_OFFSET 50
+#define ORIGIN_Y 32
+#define ORIGIN_X 0
+#define SCALE_X 10
+#define SCALE_Y 10
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "./include/oled_module.h"
 #include "./include/pin_module.h"
 
-uint8_t adc_buff;
-
 int multipile_x = 20;
 int multipile_y = 20;
-uint8_t origin_y = 32;
-uint8_t origin_x = 0;
-uint8_t scale_x = 10;
-uint8_t scale_y = 10;
-
-int voltage, current;
 int rotary_value = 0;
+
+uint8_t adc_buff;
 uint8_t conf_select = 0;
 uint8_t st_a, st_b;
 uint8_t cnt = 0;
 uint8_t mode = 0;
 uint8_t DAC_value = 0;
+
+uint16_t voltage, current;
+
 bool ready = false;
 bool DAC_st;
 bool is_cnt1_int_mode = false;
+
 // ###############################
 // #     PROTOTYPE FUNCTION      #
 // ###############################
@@ -43,20 +48,20 @@ void component_tester();
 // ###############################
 void Oscilloscope_scale()
 {
-    for (int i = 0 + origin_x; i < 128 + origin_x; i++)
+    for (int i = 0 + ORIGIN_X; i < 128 + ORIGIN_X; i++)
     {
-        OLED_drawPixel(i + origin_x, origin_y);
-        if ((i + origin_x) % scale_x == 0)
+        OLED_drawPixel(i + ORIGIN_X, ORIGIN_Y);
+        if ((i + ORIGIN_X) % SCALE_X == 0)
         {
-            OLED_drawPixel(i + origin_x, origin_y - 1);
-            OLED_drawPixel(i + origin_x, origin_y + 1);
-            for (int k = origin_y - 1 - scale_y; k > 0; k = k - scale_y)
+            OLED_drawPixel(i + ORIGIN_X, ORIGIN_Y - 1);
+            OLED_drawPixel(i + ORIGIN_X, ORIGIN_Y + 1);
+            for (int k = ORIGIN_Y - 1 - SCALE_Y; k > 0; k = k - SCALE_Y)
             {
-                OLED_drawPixel(i + origin_x, k);
+                OLED_drawPixel(i + ORIGIN_X, k);
             }
-            for (int k = origin_y + 1 + scale_y; k <= 64; k = k + scale_y)
+            for (int k = ORIGIN_Y + 1 + SCALE_Y; k <= 64; k = k + SCALE_Y)
             {
-                OLED_drawPixel(i + origin_x, k);
+                OLED_drawPixel(i + ORIGIN_X, k);
             }
         }
     }
@@ -175,10 +180,11 @@ void component_tester()
     uint16_t v1 = ADC;
 
 
-    voltage = (((int)v1) * 128) >> 10;
-    current = (((int)v0) * 100) >> 10;
-    if(cnt >= 127-50 && cnt < 255-50){
-        OLED_drawPixel(voltage + multipile_y,64-current - multipile_x);
+    voltage = (((int)v1)) >> 3;
+    current = (((int)v0)) >> 4;
+
+    if(cnt >= 127-SLICE_WINDOWN_OFFSET && cnt < 255-SLICE_WINDOWN_OFFSET){
+        OLED_drawPixel(voltage + multipile_y,63-current - multipile_x);
     }
     cnt++;
     if (DAC_value == 255)
@@ -225,7 +231,7 @@ ISR(ADC_vect)
     if (cnt < 128)
     {
         adc_buff = (ADC * multipile_x) >> 10;
-        OLED_drawPixel(cnt, origin_y - adc_buff);
+        OLED_drawPixel(cnt, ORIGIN_Y - adc_buff);
         cnt++;
     }
     else

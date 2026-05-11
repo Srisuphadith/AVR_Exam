@@ -18,6 +18,8 @@ echo "*********** make lib success ***********"
 avr-gcc -mmcu=atmega328p -c -Os ${fileName}.c -o ${fileName}.o
 echo "*********** compile ${fileName}.c ***********"
 avr-gcc -mmcu=atmega328p ${fileName}.o -Llib -lmy-avr-lib -o ${fileName}.elf
+echo "***********${fileName}.c used of Memory and RAM***********"
+avr-size -C --mcu=atmega328p ${fileName}.elf
 echo "*********** link ${fileName}.c with lib ***********"
 avr-objcopy -O ihex -R.eeprom ./${fileName}.elf ./${fileName}.hex
 echo "*********** convert to intel hex ***********"
