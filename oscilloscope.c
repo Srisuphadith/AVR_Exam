@@ -16,7 +16,7 @@
 
 int multipile_x = 20;
 int multipile_y = 20;
-int rotary_value = 0;
+int rotary_value = 1;
 
 uint8_t adc_buff;
 uint8_t conf_select = 0;
@@ -149,6 +149,10 @@ void change_mode_and_config(int m)
             ADCSRA |= (1 << ADSC);
             PORTB = 0;
             is_cnt1_int_mode = false;
+            multipile_x = 20;
+            multipile_y = 20;
+            rotary_value = 1;
+            OCR0A = 1;
         }
         conf_select = 0;
         PORTD = ((uint8_t)conf_select << DDD6);
@@ -184,7 +188,7 @@ void component_tester()
     while (!(ADCSRA & (1 << ADIF)))
         ;
     uint16_t v1 = ADC;
-    
+
     voltage = v1 / 16;
     current = v0 / 16;
     OLED_drawPixel(voltage + multipile_y, 63 - current - multipile_x);
