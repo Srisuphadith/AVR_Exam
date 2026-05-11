@@ -9,6 +9,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include "./include/oled_module.h"
 #include "./include/pin_module.h"
@@ -30,6 +31,8 @@ bool ready = false;
 bool DAC_st;
 bool is_cnt1_int_mode = false;
 
+char str_buffer1[10];
+char str_buffer2[10];
 // ###############################
 // #     PROTOTYPE FUNCTION      #
 // ###############################
@@ -333,6 +336,29 @@ void loop()
     if (ready)
     {
         cli();
+        if(mode == 0){
+            int n=0;
+            
+            uint16_t k = 7812/OCR0A;
+            uint16_t div = (10*1000)/k;
+            itoa(k, str_buffer1, 10);
+            // sprintf(str_buffer1, "%d Hz", k); 
+            OLED_printString(0, 56,str_buffer1);
+            
+            if (k/100 >0){
+                n=6;
+            }
+            OLED_printString(12+n, 56," Hz");
+            sprintf(str_buffer2, "%d ms/DIV", div); 
+            // OLED_printString(0, 56,str_buffer1); 
+            OLED_printString(50, 56,str_buffer2); 
+            
+            uint16_t vid = (5/2)*(multipile_x/20);
+            sprintf(str_buffer2, "%d V/DIV", vid); 
+            OLED_printString(0, 0,str_buffer2); 
+        }else{
+
+        }
         OLED_update();
         OLED_clear_buffer();
         Oscilloscope_scale();

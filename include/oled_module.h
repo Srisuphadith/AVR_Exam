@@ -11,5 +11,7 @@ void OLED_clear(void);
 void OLED_drawPixel(uint8_t x, uint8_t y);
 void OLED_update(void);
 void OLED_clear_buffer();
+void OLED_drawChar(uint8_t x, uint8_t y, char c);
+void OLED_printString(uint8_t x, uint8_t y, const char* str);
 
 #endif

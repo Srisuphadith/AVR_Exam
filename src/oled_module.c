@@ -96,3 +96,96 @@ void OLED_clear_buffer()
         buffer[i] = 0;
     }
 }
+#include <avr/pgmspace.h> // ต้องใช้ไลบรารีนี้เพื่อเก็บฟอนต์ไว้ใน Flash Memory (ไม่ให้ RAM เต็ม)
+
+// 1. สร้างตาราง Font ขนาด 5x7 พิกเซล (เฉพาะตัวเลข 0-9, ตัวอักษรบางตัว และสัญลักษณ์)
+// เก็บไว้ใน PROGMEM เพื่อประหยัด RAM
+const uint8_t font5x7[33][5] PROGMEM = {
+    {0x00, 0x00, 0x00, 0x00, 0x00}, // 0: Space (เว้นวรรค)
+    {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 1: '0'
+    {0x00, 0x42, 0x7F, 0x40, 0x00}, // 2: '1'
+    {0x42, 0x61, 0x51, 0x49, 0x46}, // 3: '2'
+    {0x21, 0x41, 0x45, 0x4B, 0x31}, // 4: '3'
+    {0x18, 0x14, 0x12, 0x7F, 0x10}, // 5: '4'
+    {0x27, 0x45, 0x45, 0x45, 0x39}, // 6: '5'
+    {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 7: '6'
+    {0x01, 0x71, 0x09, 0x05, 0x03}, // 8: '7'
+    {0x36, 0x49, 0x49, 0x49, 0x36}, // 9: '8'
+    {0x06, 0x49, 0x49, 0x29, 0x1E}, // 10: '9'
+    {0x1F, 0x20, 0x40, 0x20, 0x1F}, // 11: 'V'
+    {0x7C, 0x12, 0x11, 0x12, 0x7C}, // 12: 'A'
+    {0x00, 0x60, 0x60, 0x00, 0x00}, // 13: '.'
+    {0x08, 0x08, 0x3E, 0x08, 0x08}, // 14: '+' 
+    {0x08, 0x08, 0x08, 0x08, 0x08}, // 15: '-'
+    {0x63, 0x14, 0x08, 0x14, 0x63}, // 16: 'X'
+    {0x03, 0x04, 0x78, 0x04, 0x03}, // 17: 'Y'
+    {0x7F, 0x08, 0x08, 0x08, 0x7F}, // 18: 'H'
+    {0x44, 0x64, 0x54, 0x4C, 0x44}, // 19: 'z' 
+    {0x7F, 0x10, 0x28, 0x44, 0x00}, // 20: 'k'
+    {0x7F, 0x02, 0x04, 0x02, 0x7F}, // 21: 'M'
+    {0x7C, 0x04, 0x78, 0x04, 0x78}, // 22: 'm'
+    {0x3C, 0x40, 0x40, 0x20, 0x7C}, // 23: 'u'
+    {0x48, 0x54, 0x54, 0x54, 0x20}, // 24: 's'
+    {0x01, 0x01, 0x7F, 0x01, 0x01}, // 25: 'T'
+    {0x3E, 0x41, 0x41, 0x41, 0x22}, // 26: 'C'
+    {0x7F, 0x09, 0x19, 0x29, 0x46}, // 27: 'R'
+    {0x7F, 0x09, 0x09, 0x09, 0x01}, // 28: 'F'
+    {0x08, 0x04, 0x08, 0x10, 0x08},  // 29: '~'
+    {0x7F, 0x41, 0x41, 0x22, 0x1C}, // 30: 'D'
+    {0x00, 0x41, 0x7F, 0x41, 0x00}, // 31: 'I'
+    {0x20, 0x10, 0x08, 0x04, 0x02}  // 32: '/'
+};
+
+
+// ฟังก์ชันแปลงตัวอักษรเป็น Index ของฟอนต์
+uint8_t getFontIndex(char c) {
+    if (c == ' ') return 0;
+    if (c >= '0' && c <= '9') return c - '0' + 1;
+    if (c == 'V') return 11;
+    if (c == 'A') return 12;
+    if (c == '.') return 13;
+    if (c == '+') return 14;
+    if (c == '-') return 15;
+    if (c == 'X') return 16;
+    if (c == 'Y') return 17;
+    if (c == 'H') return 18;
+    if (c == 'z') return 19;
+    if (c == 'k') return 20;
+    if (c == 'M') return 21;
+    if (c == 'm') return 22;
+    if (c == 'u') return 23;
+    if (c == 's') return 24;
+    if (c == 'T') return 25;
+    if (c == 'C') return 26;
+    if (c == 'R') return 27;
+    if (c == 'F') return 28;
+    if (c == '~') return 29;
+    if (c == 'D') return 30;
+    if (c == 'I') return 31;
+    if (c == '/') return 32;
+    return 0; 
+}
+
+
+// 2. ฟังก์ชันสำหรับวาดตัวอักษร 1 ตัว
+void OLED_drawChar(uint8_t x, uint8_t y, char c) {
+    uint8_t index = getFontIndex(c);
+    for (uint8_t i = 0; i < 5; i++) {
+        // อ่านข้อมูลพิกเซลจาก Flash Memory
+        uint8_t line = pgm_read_byte(&(font5x7[index][i])); 
+        for (uint8_t j = 0; j < 8; j++) {
+            if (line & (1 << j)) {
+                OLED_drawPixel(x + i, y + j);
+            }
+        }
+    }
+}
+
+// 3. ฟังก์ชันสำหรับวาดข้อความยาวๆ
+void OLED_printString(uint8_t x, uint8_t y, const char* str) {
+    while (*str) {
+        OLED_drawChar(x, y, *str);
+        x += 6; // เลื่อนแกน X ไปทีละ 6 พิกเซล (ความกว้างฟอนต์ 5 + ช่องว่าง 1)
+        str++;
+    }
+}
