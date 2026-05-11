@@ -189,3 +189,45 @@ void OLED_printString(uint8_t x, uint8_t y, const char* str) {
         str++;
     }
 }
+
+static int abs_int(int v)
+{
+    return (v < 0) ? -v : v;
+}
+
+void OLED_drawLine(uint8_t x0, uint8_t y0,
+                   uint8_t x1, uint8_t y1)
+{
+    if (x0 >= 128 || y0 >= 64 || x1 >= 128 || y1 >= 64 )
+        return;
+    int dx = abs_int(x1 - x0);
+    int sx = (x0 < x1) ? 1 : -1;
+
+    int dy = -abs_int(y1 - y0);
+    int sy = (y0 < y1) ? 1 : -1;
+
+    int err = dx + dy;
+    int e2;
+
+    while (1)
+    {
+        OLED_drawPixel(x0, y0);
+
+        if (x0 == x1 && y0 == y1)
+            break;
+
+        e2 = 2 * err;
+
+        if (e2 >= dy)
+        {
+            err += dy;
+            x0 += sx;
+        }
+
+        if (e2 <= dx)
+        {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}

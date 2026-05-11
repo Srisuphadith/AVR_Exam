@@ -25,14 +25,15 @@ uint8_t cnt = 0;
 uint8_t mode = 0;
 uint8_t DAC_value = 0;
 
-uint16_t voltage, current;
+int voltage, current;
 
 bool ready = false;
 bool DAC_st;
 bool is_cnt1_int_mode = false;
 
 char str_buffer1[10];
-char str_buffer2[10];
+uint8_t tmp_X;
+uint8_t tmp_Y;
 // ###############################
 // #     PROTOTYPE FUNCTION      #
 // ###############################
@@ -94,8 +95,8 @@ void rotary_handle(int direction)
     if (rotary_value > 255)
         rotary_value = 255;
 
-    if (rotary_value < 0)
-        rotary_value = 0;
+    if (rotary_value < 2)
+        rotary_value = 1;
 
     if (conf_select == 0)
     {
@@ -136,6 +137,8 @@ void change_mode_and_config(int m)
             conter1_enable_OCR1A_init();
             ADCSRA &= ~((1 << ADATE) | (1 << ADIE));
             ADMUX &= ~(0x0F);
+            multipile_y = 32;
+            multipile_x = 32;
         }
         else
         {
@@ -181,15 +184,17 @@ void component_tester()
     while (!(ADCSRA & (1 << ADIF)))
         ;
     uint16_t v1 = ADC;
-
-
-    voltage = (((int)v1)) >> 3;
-    current = (((int)v0)) >> 4;
-
-    if(cnt >= 127-SLICE_WINDOWN_OFFSET && cnt < 255-SLICE_WINDOWN_OFFSET){
-        OLED_drawPixel(voltage + multipile_y,63-current - multipile_x);
+    
+    voltage = v1 / 16;
+    current = v0 / 16;
+    OLED_drawPixel(voltage + multipile_y, 63 - current - multipile_x);
+    if (DAC_value > 2 && DAC_value < 253)
+    {
+        OLED_drawLine(tmp_X, tmp_Y, voltage + multipile_y, 63 - current - multipile_x);
     }
-    cnt++;
+    tmp_X = voltage + multipile_y;
+    tmp_Y = 63 - current - multipile_x;
+
     if (DAC_value == 255)
     {
         cnt = 0;
@@ -281,7 +286,9 @@ void counter0_auto_trigger_adc_init()
     TCNT0 = 0;
     TCCR0A = (1 << WGM01);
     // prescalar 1024
-    TCCR0B = (1 << CS02) | (1 << CS00);
+    // TCCR0B = (1 << CS02) | (1 << CS00);
+    // prescalar 256
+    TCCR0B = (1 << CS02);
     // Enable Interrupt Compare match OCR0A
     TIMSK0 |= (1 << OCIE0A);
     sei();
@@ -303,7 +310,7 @@ void conter1_enable_ovf_init()
 void conter1_enable_OCR1A_init()
 {
     TCNT1 = 0;
-    TCCR1B = (1 << CS12) | (1 << CS10) | (1 << WGM12);
+    TCCR1B = (1 << CS10) | (1 << WGM12);
     TIMSK1 = (1 << OCIE1A);
 }
 // ###############################
@@ -336,28 +343,49 @@ void loop()
     if (ready)
     {
         cli();
-        if(mode == 0){
-            int n=0;
-            
-            uint16_t k = 7812/OCR0A;
-            uint16_t div = (10*1000)/k;
-            itoa(k, str_buffer1, 10);
-            // sprintf(str_buffer1, "%d Hz", k); 
-            OLED_printString(0, 56,str_buffer1);
-            
-            if (k/100 >0){
-                n=6;
-            }
-            OLED_printString(12+n, 56," Hz");
-            sprintf(str_buffer2, "%d ms/DIV", div); 
-            // OLED_printString(0, 56,str_buffer1); 
-            OLED_printString(50, 56,str_buffer2); 
-            
-            uint16_t vid = (5/2)*(multipile_x/20);
-            sprintf(str_buffer2, "%d V/DIV", vid); 
-            OLED_printString(0, 0,str_buffer2); 
-        }else{
+        if (mode == 0)
+        {
+            int n = 0;
+            char tmp[10];
+            float freq = 31250.0 / OCR0A;
+            float time_div = (10.0 * 1000.0) / freq;
+            float volt_div = (5.0 / 2.0) * (20.0 / multipile_x);
 
+            // show freq of read
+            itoa(freq, tmp, 10);
+            sprintf(str_buffer1, "%s Hz", tmp);
+            OLED_printString(0, 56, str_buffer1);
+
+            // if (freq / 100 > 0)
+            // {
+            //     n = 6;
+            // }
+            // OLED_printString(12 + n, 56, " Hz");
+
+            // show time/div
+            uint8_t time_div_integer = (uint8_t)time_div;
+            uint8_t time_div_decimal = (uint8_t)((time_div - time_div_integer) * 100);
+            sprintf(str_buffer1, "%d.%02d ms/DIV", time_div_integer, time_div_decimal);
+            OLED_printString(50, 56, str_buffer1);
+
+            // show volt/div
+            uint8_t volt_div_integer = (uint8_t)volt_div;
+            uint8_t volt_div_decimal = (uint8_t)((volt_div - volt_div_integer) * 100);
+            sprintf(str_buffer1, "%d.%02d V/DIV", volt_div_integer, volt_div_decimal);
+            OLED_printString(0, 0, str_buffer1);
+        }
+        else
+        {
+            OLED_printString(0, 0, "VI");
+            for (int i = 0; i < 64; i++)
+            {
+                OLED_drawPixel(60, i);
+                if (i % 10 == 0)
+                {
+                    OLED_drawPixel(60 - 1, i);
+                    OLED_drawPixel(60 + 1, i);
+                }
+            }
         }
         OLED_update();
         OLED_clear_buffer();
