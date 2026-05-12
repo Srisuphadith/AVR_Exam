@@ -242,8 +242,13 @@ ISR(ADC_vect)
 {
     if (cnt < 128)
     {
-        adc_buff = (ADC * multipile_x) >> 10;
-        OLED_drawPixel(cnt, ORIGIN_Y - adc_buff);
+        adc_buff = ORIGIN_Y - ((ADC * multipile_x) >> 10);
+        OLED_drawPixel(cnt,adc_buff);
+        if(cnt > 1)
+            OLED_drawLine(tmp_X,tmp_Y,cnt,adc_buff);
+        tmp_X = cnt;
+        tmp_Y = adc_buff;
+        
         cnt++;
     }
     else
